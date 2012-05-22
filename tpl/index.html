@@ -14,7 +14,6 @@
         enabled: true
     });
     Ext.Loader.setPath('Ext.ux', 'http://dev.sencha.com/deploy/ext-4.0.0/examples/ux');
-
     Ext.require([
         'Ext.selection.CellModel',
         'Ext.grid.*',
@@ -22,8 +21,10 @@
         'Ext.util.*',
         'Ext.state.*',
         'Ext.form.*',
+        'Ext.encode',
         'Ext.ux.CheckColumn'
     ]);
+    store = ''
 
     Ext.onReady(function(){
 //        Ext.QuickTips.init();
@@ -32,36 +33,77 @@
         Ext.define('Weapon', {
             extend: 'Ext.data.Model',
             fields: [
-//                    'name_ja', 'category', 'durability', 'growthType', 'atk','rarity','skill1','skill2','skill3','name_en','userType'
-                // the 'name' below matches the tag name to read, except 'availDate'
-                // which is mapped to the tag 'availability'
                 {name: 'name_ja', type: 'string',convert: null,     defaultValue: undefined},
                 {name: 'name_en', type: 'string',convert: null,     defaultValue: undefined},
                 {name: 'category'},
                 {name: 'durability', type: 'int',convert: null,     defaultValue: undefined},
                 {name: 'growthType', type: 'int',convert: null,     defaultValue: undefined},
-//                // dates can be automatically converted by specifying dateFormat
                 {name: 'atk', type: 'int',convert: null,     defaultValue: undefined}
             ]
         });
 
+        Ext.define('Enums', {
+            extend: 'Ext.data.Model',
+            fields: [
+                "element", "attribute","bool","buff","rarity","userType","weaponCategory","growthType","itemType"
+            ]
+        })
+
 
         function category(value){
-            x = [[0,"Monster"],
-                    [1,"Sword"],
-                    [2,"BigSword"],
-                    [3,"Katana"],
-                    [4,"Knife"],
-                    [5,"Bow"],
-                    [6,"Spear"],
-                    [7,"Rod"],
-                    [8,"Book"]]
-            return x[value][1];
+//            x = [];
+//            for (i=0; i < store2.data.items[0].data.length; i++){
+//                x[i] = [i, store2.data.items[0].data[i]];
+//            }
+//            x = [[0,"Monster"],
+//                    [1,"Sword"],
+//                    [2,"BigSword"],
+//                    [3,"Katana"],
+//                    [4,"Knife"],
+//                    [5,"Bow"],
+//                    [6,"Spear"],
+//                    [7,"Rod"],
+//                    [8,"Book"]]
+            return store2.data.items[0].data['weaponCategory'][value];
+        }
+
+        function rendererFactory(category, enums){
+            if (category === null){
+                return null
+            }
+            var f = function(v){
+                return enums[category][v];
+            }
+
+            return f;
+
+        }
+        function editorFactory(type, cat, enums){
+
+            if (type == "combo"){
+                var store = [];
+                for (i=0; i<enums.length; i++){
+                    store.push(enums[i]);
+                }
+                var func = new Ext.form.ComboBox({
+                    id: cat+'Combo',
+                    xtype: 'combo',
+                    typeAhead: true,
+                    triggerAction: 'all',
+                    transform:'light',
+                    lazyRenderer: true,listClass: 'x-combo-list-small',
+                    store:store
+                });
+                return func;
+            }else if (type == "int"){
+                return {xtype: 'numberfield',allowBlank: false,minValue: 0,maxValue: 100000};
+            }
+            return func;
         }
 
 
         // create the Data Store
-        var store = Ext.create('Ext.data.Store', {
+        store = Ext.create('Ext.data.Store', {
             model: 'Weapon',
             proxy: {
                 type: 'ajax',
@@ -69,8 +111,6 @@
                 reader: {
                     type: 'json',
                     root: 'data',
-                    enums: 'enums',
-                    reference: 'reference',
                     data_type:'data_type'
                 },
                 autoLoad: true
@@ -80,130 +120,123 @@
 //                direction:'ASC'
 //            }]
         });
-        console.log(store);
+        store.load({
+            // store loading is asynchronous, use a load listener or callback to handle results
+            callback: function(records, operation, success){
+                var raw_data = this.proxy.getReader().rawData;
+                var column_settings2 = [];
+                var ref = raw_data.reference;
+                for (var i =0; i< ref.length; i++){
+                    column_settings2.push({
+                        header:ref[i][1],
+                        dataIndex:ref[i][0],
+                        renderer:rendererFactory(ref[i][3],raw_data['enums']),
+                        editor:editorFactory(ref[i][4],ref[i][3],raw_data['enums'])
+                    });
+                }
+                console.log(column_settings2);
+                var cellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
+                    clicksToEdit: 1
+                });
 
-        var cellEditing = Ext.create('Ext.grid.plugin.CellEditing', {
-            clicksToEdit: 1
+                var grid = Ext.create('Ext.grid.Panel', {
+                    store: store,
+                    columns: column_settings2,
+                    selModel: {selType: 'cellmodel'},
+                    renderTo: 'editor-grid',
+                    width: 600,
+                    height: 300,
+                    title: 'Edit Weapons?',
+                    frame: true,
+                    tbar: [{text: 'Add Weapon',
+                        handler : function(){
+                            // Create a model instance
+                            var r = Ext.create('Weapon', {
+                                name_ja: '新武器',
+                                category: 0,
+                                durability: 0,
+                                growthType: 0,
+                                atk: 100
+                            });
+                            store.insert(0, r);
+                            cellEditing.startEditByPosition({row: 0, column: 0});
+                        }
+                    }],
+                    plugins: [cellEditing]
+                });
+
+            }
         });
+
+
+
+        store2 = Ext.create('Ext.data.Store', {
+            model: 'Enums',
+            proxy: {
+                type: 'ajax',
+                url: 'testdata',
+                reader: {type: 'json',root: 'enums'},
+                autoLoad: true
+            }
+        });
+
+        store2.load({
+            // store loading is asynchronous, use a load listener or callback to handle results
+            callback: function(){
+                cat_enums = [];
+                for (i=0;i<store2.data.items[0].data['weaponCategory'].length; i++){
+                    cat_enums.push([i,store2.data.items[0].data['weaponCategory'][i]]);
+                }
+                var columns_setting = [{
+                    id: 'name_ja',
+                    header: '名前',
+                    dataIndex: 'name_ja',
+                    flex: 1,
+                    editor: {allowBlank: false}
+                },{
+                    header: '名前',
+                    dataIndex: 'name_en',
+                    flex: 1,
+                    editor: {allowBlank: false}
+                }, {
+                    header: 'Category',
+                    dataIndex: 'category',
+                    width: 130,
+                    renderer: category,
+                    field:{xtype: 'combo',typeAhead: true,triggerAction: 'all',selectOnTab: true,store:cat_enums,lazyRenderer: true,listClass: 'x-combo-list-small'}
+                }, {
+                    header: 'Durability',
+                    dataIndex: 'durability',
+                    width: 70,
+                    align: 'right',
+                    editor: {xtype: 'numberfield',allowBlank: false,minValue: 0,maxValue: 100000}
+                }, {
+                    header: 'Growth Type',
+                    dataIndex: 'growthType',
+                    width: 95,
+                    editor: {xtype: 'numberfield',allowBlank: false,minValue: 0,maxValue: 100000}
+                }, {
+                    header: 'ATK',
+                    dataIndex: 'atk',
+                    width: 95,
+                    editor: {xtype: 'numberfield',allowBlank: false,minValue: 0,maxValue: 100000}
+                }];
+
+
+
+                // manually trigger the data store load
+
+//                var enums_data = Ext.encode(Ext.pluck(store2.data.items, 'data'));
+//                console.log(Ext.pluck(store2.data.items, 'data'));
+//                console.log('data');
+            }
+        });
+
+
 
         // create the grid and specify what field you want
         // to use for the editor at each header.
-        var grid = Ext.create('Ext.grid.Panel', {
-            store: store,
-            columns: [{
-                id: 'name_ja',
-                header: '名前',
-                dataIndex: 'name_ja',
-                flex: 1,
-                editor: {
-                    allowBlank: false
-                }
-            },{
-                header: '名前',
-                dataIndex: 'name_en',
-                flex: 1,
-                editor: {
-                    allowBlank: false
-                }
-            }, {
-                header: 'Category',
-                dataIndex: 'category',
-                width: 130,
-                renderer: category,
-                field:{
-                    xtype: 'combo',
-                    typeAhead: true,
-                    triggerAction: 'all',
-                    selectOnTab: true,
-                    store: [
-                        [0,"Monster"],
-                        [1,"Sword"],
-                        [2,"BigSword"],
-                        [3,"Katana"],
-                        [4,"Knife"],
-                        [5,"Bow"],
-                        [6,"Spear"],
-                        [7,"Rod"],
-                        [8,"Book"]
-                    ],
-                    fields:['name', 'value'],
-                    displayField:'value',
-                    valueField:'name',
-                    lazyRender: true,
-                    listClass: 'x-combo-list-small'
-                }
-            }, {
-                header: 'Durability',
-                dataIndex: 'durability',
-                width: 70,
-                align: 'right',
-                editor: {
-                    xtype: 'numberfield',
-                    allowBlank: false,
-                    minValue: 0,
-                    maxValue: 100000
-                }
-            }, {
-                header: 'Growth Type',
-                dataIndex: 'growthType',
-                width: 95,
-                editor: {
-                    xtype: 'numberfield',
-                    allowBlank: false,
-                    minValue: 0,
-                    maxValue: 100000
-                }
-            }, {
-                header: 'ATK',
-                dataIndex: 'atk',
-                width: 95,
-                editor: {
-                    xtype: 'numberfield',
-                    allowBlank: false,
-                    minValue: 0,
-                    maxValue: 100000
-                }
-            }],
-            selModel: {
-                selType: 'cellmodel'
-            },
-            renderTo: 'editor-grid',
-            width: 600,
-            height: 300,
-            title: 'Edit Weapons?',
-            frame: true,
-            tbar: [{
-                text: 'Add Weapon',
-                handler : function(){
-                    // Create a model instance
-                    var r = Ext.create('Weapon', {
-                        name_ja: '新武器',
-                        category: 0,
-                        durability: 0,
-                        growthType: 0,
-                        atk: 100
-                    });
-                    store.insert(0, r);
-                    cellEditing.startEditByPosition({row: 0, column: 0});
-                }
-            }],
-            plugins: [cellEditing]
-        });
 
-        // manually trigger the data store load
-        store.load({
-            // store loading is asynchronous, use a load listener or callback to handle results
-            callback: function(){
-                console.log(store);
-                Ext.Msg.show({
-                    title: 'Store Load Callback',
-                    msg: 'store was loaded, data available for processing',
-                    modal: false,
-                    icon: Ext.Msg.INFO,
-                    buttons: Ext.Msg.OK
-                });
-            }
-        });
     });
 
 </script>

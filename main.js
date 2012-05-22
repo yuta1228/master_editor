@@ -76,20 +76,17 @@
           userType: 0
         }
       ],
-      reference: {
-        name_ja: null,
-        name_en: null,
-        category: "enums:weaponCategory",
-        durability: null,
-        growthType: "enums:growthType",
-        atk: null,
-        skill1: null,
-        skill2: null,
-        skill3: null,
-        rarity: "enums:rarity",
-        userType: "enums:userType"
-      },
-      data_type: "weapon"
+      reference:[["name_ja", "名前","Name",null,"text"],
+          ["name_en", "名前","Name",null,"text"],
+          ["category", "カテゴリ","Category","weaponCategory","combo"],
+          ["durability", "耐久値", "Durability", null, "int"],
+          ["growthType", "成長タイプ", "GrowthType", "growthType", "combo"],
+          ["atk", "攻撃力", "Atk",null, "int"],
+          ["skill1", "スキル１", "Skill1",null, "combo"],
+          ["skill2", "スキル２", "Skill2",null, "combo"],
+          ["skill3", "スキル３", "Skill3",null, "combo"],
+          ["rarity", "レア度", "rarity","rarity", "combo"],
+          ["userType", "使用者", "UserType", "userType", "combo" ]]
     };
     weapon_table.enums = supplement.enums;
     body = JSON.stringify(weapon_table);
