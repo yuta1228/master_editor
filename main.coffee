@@ -14,7 +14,16 @@ server.get('/', (req,res)->
       res.end(content, 'utf-8')
   )
 )
-
+server.post('/testdata', (req,res)->
+  if req.method == 'POST'
+    body = '';
+    req.on('data', (data)->
+      body += data;
+    )
+    req.on('end', ()->
+      console.log(JSON.parse(body));
+    )
+  )
 server.get('/testdata', (req,res)->
   supplement = {
     enums: {
@@ -33,13 +42,33 @@ server.get('/testdata', (req,res)->
   data:[
     {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:0,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
     {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:1,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
+    {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0},
     {name_ja:"ショートソード",name_en:"ShortSword",category:1,durability:"10",growthType:2,atk:"100",skill1:"スラッシュ",skill2:"None",skill3:"None",rarity:0,userType:0}
+
   ],
-  reference:
-    {name_ja:null, name_en:null, category:"enums:weaponCategory", durability:null, growthType:"enums:growthType", atk:null, skill1:null,skill2:null,skill3:null,rarity:"enums:rarity",userType:"enums:userType"}
-  data_type: "weapon"
+  reference:[["name_ja", "名前","Name",null,"text"],
+    ["name_en", "名前","Name",null,"text"],
+    ["category", "カテゴリ","Category","weaponCategory","combo"],
+    ["durability", "耐久値", "Durability", null, "int"],
+    ["growthType", "成長タイプ", "GrowthType", "growthType", "combo"],
+    ["atk", "攻撃力", "Atk",null, "int"],
+    ["skill1", "スキル１", "Skill1",null, "combo"],
+    ["skill2", "スキル２", "Skill2",null, "combo"],
+    ["skill3", "スキル３", "Skill3",null, "combo"],
+    ["rarity", "レア度", "rarity","rarity", "combo"],
+    ["userType", "使用者", "UserType", "userType", "combo" ]],
   };
   weapon_table.enums = supplement.enums
+  param = req.query
+  weapon_table.total = weapon_table.data.length;
+  weapon_table.data = weapon_table.data.slice(param.start, parseInt(param.start)+parseInt(param.limit))
+
   body = JSON.stringify(weapon_table)
   res.writeHead(200, {'Content-Type': 'text/plain; charset=utf-8'})
   res.end(body)

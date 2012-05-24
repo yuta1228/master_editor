@@ -21,8 +21,21 @@
     });
   });
 
+  server.post('/testdata', function(req, res) {
+    var body;
+    if (req.method === 'POST') {
+      body = '';
+      req.on('data', function(data) {
+        return body += data;
+      });
+      return req.on('end', function() {
+        return console.log(JSON.parse(body));
+      });
+    }
+  });
+
   server.get('/testdata', function(req, res) {
-    var body, supplement, weapon_table;
+    var body, param, supplement, weapon_table;
     supplement = {
       enums: {
         element: ["None", "Fire", "Water", "Earth", "Thunder"],
@@ -39,6 +52,7 @@
     weapon_table = {
       data: [
         {
+          _id:1,
           name_ja: "ショートソード",
           name_en: "ShortSword",
           category: 1,
@@ -51,6 +65,7 @@
           rarity: 0,
           userType: 0
         }, {
+              _id:2,
           name_ja: "ショートソード",
           name_en: "ShortSword",
           category: 1,
@@ -63,6 +78,98 @@
           rarity: 0,
           userType: 0
         }, {
+              _id:3,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:4,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:5,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:6,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:7,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:8,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:8,
+          name_ja: "ショートソード",
+          name_en: "ShortSword",
+          category: 1,
+          durability: "10",
+          growthType: 2,
+          atk: "100",
+          skill1: "スラッシュ",
+          skill2: "None",
+          skill3: "None",
+          rarity: 0,
+          userType: 0
+        }, {
+              _id:9,
           name_ja: "ショートソード",
           name_en: "ShortSword",
           category: 1,
@@ -76,19 +183,12 @@
           userType: 0
         }
       ],
-      reference:[["name_ja", "名前","Name",null,"text"],
-          ["name_en", "名前","Name",null,"text"],
-          ["category", "カテゴリ","Category","weaponCategory","combo"],
-          ["durability", "耐久値", "Durability", null, "int"],
-          ["growthType", "成長タイプ", "GrowthType", "growthType", "combo"],
-          ["atk", "攻撃力", "Atk",null, "int"],
-          ["skill1", "スキル１", "Skill1",null, "combo"],
-          ["skill2", "スキル２", "Skill2",null, "combo"],
-          ["skill3", "スキル３", "Skill3",null, "combo"],
-          ["rarity", "レア度", "rarity","rarity", "combo"],
-          ["userType", "使用者", "UserType", "userType", "combo" ]]
+      reference: [["name_ja", "名前", "Name", null, "text"], ["name_en", "名前", "Name", null, "text"], ["category", "カテゴリ", "Category", "weaponCategory", "combo"], ["durability", "耐久値", "Durability", null, "int"], ["growthType", "成長タイプ", "GrowthType", "growthType", "combo"], ["atk", "攻撃力", "Atk", null, "int"], ["skill1", "スキル１", "Skill1", null, "combo"], ["skill2", "スキル２", "Skill2", null, "combo"], ["skill3", "スキル３", "Skill3", null, "combo"], ["rarity", "レア度", "rarity", "rarity", "combo"], ["userType", "使用者", "UserType", "userType", "combo"]]
     };
     weapon_table.enums = supplement.enums;
+    param = req.query;
+    weapon_table.total = weapon_table.data.length;
+    weapon_table.data = weapon_table.data.slice(param.start, parseInt(param.start) + parseInt(param.limit));
     body = JSON.stringify(weapon_table);
     res.writeHead(200, {
       'Content-Type': 'text/plain; charset=utf-8'
