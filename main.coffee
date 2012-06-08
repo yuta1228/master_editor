@@ -68,9 +68,16 @@ db.open((err, db)->
               )
             else
               delete data._id
-              collection.insert(data, (err, result)->
-                console.log("inserted", data)
+              db.collection("counters", (err, counter)->
+                counter.findAndModify({_id:"weapon_id"},{},{$inc:{c:1}}, (err, new_counter)->
+                  data.n_id = new_counter.c
+                  console.log(data)
+#                  collection.insert(data, (err, result)->
+#                    console.log("inserted", data)
+#                )
+                )
               )
+
           body = JSON.parse(body)
           if body.length > 0
             update_data i for i in body
@@ -87,39 +94,64 @@ db.open((err, db)->
       res.writeHead(200, {'Content-Type': 'application/json; charset=utf-8'})
       res.end(body)
   #
+#
+#  server.get('/api/reference/*', (req, res) ->
+#    context = url.parse(req.url)['pathname'].split("/api/reference/")[1]
+#
+#  )
 
   server.get('/api/*', (req,res)->
     context = url.parse(req.url)['pathname'].split("/api/")[1]
     param = req.query
+    if param.fields
+      fields = {}
+      for fl in param.fields.split(',')
+        fields[fl] = 1
+    else
+      fields = null
+    console.log(context)
     ret_data = {}
     ret_data[context] = {}
-    db.collection("reference").findOne({name:context},(err, item) ->
-      if !err
-        if item != null
-          ret_data[context].reference = item.data
+    console.log(fields == {})
+    if fields == null
+      db.collection("reference").findOne({name:context},(err, item) ->
+        if !err
+          console.log('reference', item)
+          if item != null
+            ret_data[context].reference = item.data
+          else
+            ret_data[context].reference = {}
         else
-          ret_data[context].reference = {}
-      else
-        console.trace()
-#        console.log(err)
-      check_data(ret_data[context], res)
-    )
-    db.collection(context).find({},{skip:param.start, limit:param.limit}).toArray((err,item)->
-      if !err
-        ret_data[context].data = item
-      else
-        console.trace()
-#        console.log(err)
-      check_data(ret_data[context], res)
+          console.trace()
+  #        console.log(err)
+        check_data(ret_data[context], res)
       )
-    db.collection("enums").findOne({},{fields:{_id:0}},(err,item)->
-      if !err
-        console.log(item);
-        ret_data[context].enums = item
-      else
-        console.trace()
-#        console.log(err)
-      check_data(ret_data[context],res)
+      db.collection("enums").findOne({},{fields:{_id:0}},(err,item)->
+        if item
+          console.log(item)
+          ret_data[context].enums = item
+        else
+          console.log(err)
+        check_data(ret_data[context],res)
+      )
+      db.collection(context).find({},{skip:param.start, limit:param.limit, sort:"n_id"}).toArray((err,item)->
+        if !err
+          ret_data[context].data = item
+        else
+          console.trace()
+  #        console.log(err)
+        check_data(ret_data[context], res)
+        )
+    else
+      fields['_id'] = 0
+      db.collection(context).find({},fields).sort("n_id",1).toArray((err,item)->
+        if !err
+          console.log(item, 'test')
+          ret_data[context].data = item
+        else
+          console.trace()
+        #        console.log(err)
+        check_data(ret_data[context], res)
       )
     db.collection(context).count((err,count)->
       if !err

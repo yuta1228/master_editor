@@ -1,9 +1,21 @@
 (function() {
-  var app, fs, server;
+  var app, db, fs, mongo, path, server, url;
 
   app = require("express");
 
   fs = require("fs");
+
+  path = require('path');
+
+  url = require('url');
+
+  mongo = require('mongodb');
+
+  server = new mongo.Server('localhost', 27017, {
+    auto_reconnect: true
+  });
+
+  db = new mongo.Db("tinyquest", server);
 
   server = app.createServer();
 
@@ -21,179 +33,197 @@
     });
   });
 
-  server.post('/testdata', function(req, res) {
-    var body;
-    if (req.method === 'POST') {
+  server.get('/static/*', function(req, res) {
+    var filePath;
+    filePath = '.' + req.url.replace('static', 'htdocs');
+    return path.exists(filePath, function(exists) {
+      if (exists) {
+        return fs.readFile(filePath, function(error, content) {
+          var ext;
+          if (error) {
+            res.writeHead(500);
+            return res.end();
+          } else {
+            ext = path.basename(filePath).split(".").pop();
+            if (ext === "js") {
+              res.writeHead(200, {
+                'Content-Type': 'application/javascript'
+              });
+              return res.end(content, 'utf-8');
+            } else if (ext === "png") {
+              res.writeHead(200, {
+                'Content-Type': 'image/png'
+              });
+              return res.end(content, 'utf-8');
+            } else {
+              res.writeHead(200, {
+                'Content-Type': 'text/html'
+              });
+              return res.end(content, 'utf-8');
+            }
+          }
+        });
+      } else {
+        res.writeHead(404);
+        return res.end();
+      }
+    });
+  });
+
+  db.open(function(err, db) {
+    var check_data;
+    server.post('/api/*', function(req, res) {
+      var body;
       body = '';
       req.on('data', function(data) {
         return body += data;
       });
       return req.on('end', function() {
-        return console.log(JSON.parse(body));
+        var context;
+        context = url.parse(req.url)['pathname'].split("/api/")[1];
+        if (!err) {
+          return db.collection(context, function(err, collection) {
+            var i, update_data, _i, _len, _results;
+            update_data = function(data) {
+              var id;
+              if (data._id) {
+                id = mongo.ObjectID(data._id);
+                delete data._id;
+                collection.findOne({
+                  _id: id
+                }, function(err, item) {});
+                return collection.update({
+                  '_id': id
+                }, data, {
+                  upsert: true,
+                  safe: true
+                }, function(err, result) {});
+              } else {
+                delete data._id;
+                return db.collection("counters", function(err, counter) {
+                  return counter.findAndModify({
+                    _id: "weapon_id"
+                  }, {}, {
+                    $inc: {
+                      c: 1
+                    }
+                  }, function(err, new_counter) {
+                    data.num_id = new_counter.c;
+                    return console.log(data);
+                  });
+                });
+              }
+            };
+            body = JSON.parse(body);
+            if (body.length > 0) {
+              _results = [];
+              for (_i = 0, _len = body.length; _i < _len; _i++) {
+                i = body[_i];
+                _results.push(update_data(i));
+              }
+              return _results;
+            } else {
+              return update_data(body);
+            }
+          });
+        }
       });
-    }
-  });
-
-  server.get('/testdata', function(req, res) {
-    var body, param, supplement, weapon_table;
-    supplement = {
-      enums: {
-        element: ["None", "Fire", "Water", "Earth", "Thunder"],
-        attribute: ["None", "Slash", "Pierce", "Smash", "Magic"],
-        bool: ["No", "Yes"],
-        buff: ["None", "Poison", "StrongPoison", "Wet", "Freeze", "ArmorDown", "ArmorUp", "AttackDown", "AttackUp", "Regeneration", "Paralyze", "LastStand"],
-        rarity: ["Common", "Uncommon", "Heroic", "Legend", "Mythic"],
-        userType: ["All", "Player", "Monster"],
-        weaponCategory: ["Monster", "Sword", "BigSword", "Katana", "Knife", "Bow", "Spear", "Rod", "Book"],
-        growthType: ["slow", "normal", "fast"],
-        itemType: ["Weapon", "Material"]
+    });
+    check_data = function(context, res) {
+      var body, d;
+      d = context;
+      if (d.data !== void 0 && d.reference !== void 0 && d.enums !== void 0 && d.total !== void 0) {
+        body = JSON.stringify(d);
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8'
+        });
+        return res.end(body);
       }
     };
-    weapon_table = {
-      data: [
-        {
-          _id:1,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 0,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:2,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 1,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:3,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:4,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:5,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:6,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:7,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:8,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:8,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
-        }, {
-              _id:9,
-          name_ja: "ショートソード",
-          name_en: "ShortSword",
-          category: 1,
-          durability: "10",
-          growthType: 2,
-          atk: "100",
-          skill1: "スラッシュ",
-          skill2: "None",
-          skill3: "None",
-          rarity: 0,
-          userType: 0
+    return server.get('/api/*', function(req, res) {
+      var context, fields, fl, param, ret_data, _i, _len, _ref;
+      context = url.parse(req.url)['pathname'].split("/api/")[1];
+      param = req.query;
+      if (param.fields) {
+        fields = {};
+        _ref = param.fields.split(',');
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          fl = _ref[_i];
+          fields[fl] = 1;
         }
-      ],
-      reference: [["name_ja", "名前", "Name", null, "text"], ["name_en", "名前", "Name", null, "text"], ["category", "カテゴリ", "Category", "weaponCategory", "combo"], ["durability", "耐久値", "Durability", null, "int"], ["growthType", "成長タイプ", "GrowthType", "growthType", "combo"], ["atk", "攻撃力", "Atk", null, "int"], ["skill1", "スキル１", "Skill1", null, "combo"], ["skill2", "スキル２", "Skill2", null, "combo"], ["skill3", "スキル３", "Skill3", null, "combo"], ["rarity", "レア度", "rarity", "rarity", "combo"], ["userType", "使用者", "UserType", "userType", "combo"]]
-    };
-    weapon_table.enums = supplement.enums;
-    param = req.query;
-    weapon_table.total = weapon_table.data.length;
-    weapon_table.data = weapon_table.data.slice(param.start, parseInt(param.start) + parseInt(param.limit));
-    body = JSON.stringify(weapon_table);
-    res.writeHead(200, {
-      'Content-Type': 'text/plain; charset=utf-8'
+      } else {
+        fields = null;
+      }
+      console.log(context);
+      ret_data = {};
+      ret_data[context] = {};
+      console.log(fields === {});
+      if (fields === null) {
+        db.collection("reference").findOne({
+          name: context
+        }, function(err, item) {
+          if (!err) {
+            console.log('reference', item);
+            if (item !== null) {
+              ret_data[context].reference = item.data;
+            } else {
+              ret_data[context].reference = {};
+            }
+          } else {
+            console.trace();
+          }
+          return check_data(ret_data[context], res);
+        });
+        db.collection("enums").findOne({}, {
+          fields: {
+            _id: 0
+          }
+        }, function(err, item) {
+          if (item) {
+            console.log(item);
+            ret_data[context].enums = item;
+          } else {
+            console.log(err);
+          }
+          return check_data(ret_data[context], res);
+        });
+        db.collection(context).find({}, {
+          skip: param.start,
+          limit: param.limit,
+          sort: "n_id"
+        }).toArray(function(err, item) {
+          if (!err) {
+            ret_data[context].data = item;
+          } else {
+            console.trace();
+          }
+          return check_data(ret_data[context], res);
+        });
+      } else {
+        fields['_id'] = 0;
+        db.collection(context).find({}, fields).sort("n_id", 1).toArray(function(err, item) {
+          if (!err) {
+            console.log(item, 'test');
+            ret_data[context].data = item;
+          } else {
+            console.trace();
+          }
+          return check_data(ret_data[context], res);
+        });
+      }
+      return db.collection(context).count(function(err, count) {
+        if (!err) {
+          if (count !== null) {
+            ret_data[context].total = count;
+          } else {
+            ret_data[context].total = 0;
+          }
+        } else {
+          console.trace();
+        }
+        return check_data(ret_data[context], res);
+      });
     });
-    return res.end(body);
   });
 
   server.listen(8080);
